@@ -61,6 +61,36 @@ class DataCalculator:
             raise ValueError("Division by zero is not allowed.")
         return bits1 // bits2
 
+    @staticmethod
+    def calculate_and_distribute(value, operation='add'):
+        """
+        Perform the specified operation and distribute the result across all units.
+        
+        :param value: The value to add/subtract (in bits)
+        :param operation: 'add' or 'subtract'
+        :return: A dictionary with all units and their values
+        """
+        current_bits = getattr(DataCalculator, 'current_bits', 0)
+        
+        if operation == 'add':
+            current_bits += value
+        elif operation == 'subtract':
+            current_bits = max(0, current_bits - value)
+        else:
+            raise ValueError(f"Unknown operation: {operation}")
+        
+        DataCalculator.current_bits = current_bits
+        
+        result = {}
+        remaining_bits = current_bits
+        
+        for unit, factor in DataCalculator.UNIT_FACTORS.items():
+            unit_value = remaining_bits // factor
+            remaining_bits %= factor
+            result[unit] = unit_value
+        
+        return result
+
 class CalculatorGUI:
     def __init__(self, root):
         self.root = root

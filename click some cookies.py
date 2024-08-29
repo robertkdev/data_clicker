@@ -10,7 +10,7 @@ class RolloverClickerGame:
 
         # Initialize values
         self.units = list(DataCalculator.UNIT_FACTORS.keys())[::-1]  # Reverse order
-        self.resources = 0  # Store resources as bits
+        self.resources = DataCalculator.calculate_and_distribute(0)  # Initialize resources as a dictionary
         self.generators = [0] * len(self.units)
 
         # Create labels, buttons, and generator displays for each unit
@@ -52,14 +52,9 @@ class RolloverClickerGame:
 
     def add_selected_data_type(self):
         selected_type = self.selected_data_type.get()
-        self.increment_unit(selected_type)
-
-    def increment_unit(self, unit):
-        start_time = time.time()
-        self.resources = DataCalculator.add(self.resources, 'bit', 1, unit)
+        bits_to_add = DataCalculator.convert_to_bits(1, selected_type)
+        self.resources = DataCalculator.calculate_and_distribute(bits_to_add, 'add')
         self.update_display()
-        increment_time = time.time() - start_time
-        print(f"increment_unit execution time: {increment_time:.6f} seconds")
 
     def buy_generator(self, i):
         if i == 0:
@@ -69,56 +64,46 @@ class RolloverClickerGame:
         cost_unit = self.units[i-1]
         cost = DataCalculator.convert_to_bits(10, cost_unit)
 
-        start_time = time.time()
-        if self.resources >= cost:
-            self.resources = DataCalculator.subtract(self.resources, 'bit', cost, 'bit')
+        if self.resources['bit'] >= cost:
+            self.resources = DataCalculator.calculate_and_distribute(cost, 'subtract')
             self.generators[i] += 1
             self.update_display()
             print(f"Successfully bought {self.units[i].capitalize()} Generator.")
         else:
             print(f"Not enough resources to buy {self.units[i].capitalize()} Generator.")
-        
-        buy_time = time.time() - start_time
-        print(f"buy_generator execution time: {buy_time:.6f} seconds")
 
     def sell_all_generators(self):
-        start_time = time.time()
+        refund = 0
         for i in range(1, len(self.units)):  # Exclude the highest tier
-            refund = DataCalculator.multiply(self.generators[i], 'bit', 10, self.units[i-1])
-            self.resources = DataCalculator.add(self.resources, 'bit', refund, 'bit')
+            refund += DataCalculator.convert_to_bits(self.generators[i] * 10, self.units[i-1])
             self.generators[i] = 0
 
+        self.resources = DataCalculator.calculate_and_distribute(refund, 'add')
         self.update_display()
-        sell_all_time = time.time() - start_time
-        print(f"sell_all_generators execution time: {sell_all_time:.6f} seconds")
         print("All generators sold and resources refunded.")
 
     def auto_increment(self):
-        start_time = time.time()
+        increment = 0
         for i, count in enumerate(self.generators):
-            self.resources = DataCalculator.add(self.resources, 'bit', count, self.units[i])
+            increment += DataCalculator.convert_to_bits(count, self.units[i])
+        self.resources = DataCalculator.calculate_and_distribute(increment, 'add')
         self.update_display()
-        auto_increment_time = time.time() - start_time
-        print(f"auto_increment execution time: {auto_increment_time:.6f} seconds")
         self.master.after(1000, self.auto_increment)  # Repeat every second
 
     def update_display(self):
-        start_time = time.time()
-        calculator_gui = CalculatorGUI(None)  # Create a temporary CalculatorGUI instance
-        calculator_gui.display_result(self.resources)  # Use its display_result method
-        result_text = calculator_gui.result_text.get("1.0", tk.END)  # Get the formatted result
-        
         for i, unit in enumerate(self.units):
-            value = 0
-            for line in result_text.split('\n'):
-                if line.startswith(unit):
-                    value = int(line.split(': ')[1])
-                    break
-            self.labels[i].config(text=f"{unit.capitalize()}: {value}")
-            self.generator_labels[i].config(text=f"Generators: {self.generators[i]}")
-        
-        update_display_time = time.time() - start_time
-        print(f"update_display execution time: {update_display_time:.6f} seconds")
+            value = self.resources.get(unit, 0)
+            if value > 0:
+                self.labels[i].config(text=f"{unit.capitalize()}: {value}")
+            else:
+                self.labels[i].config(text="")
+
+        # Update generator labels
+        for i, count in enumerate(self.generators):
+            self.generator_labels[i].config(text=f"Generators: {count}")
+
+
+
 
 if __name__ == "__main__":
     root = tk.Tk()
