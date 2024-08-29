@@ -3,7 +3,7 @@ from tkinter import ttk
 import time
 from data_calculator import DataCalculator, CalculatorGUI
 
-class RolloverClickerGame:
+class DataClickerGame:
     def __init__(self, master):
         self.master = master
         self.master.title("Data Clicker")
@@ -11,7 +11,7 @@ class RolloverClickerGame:
         # Initialize values
         self.units = list(DataCalculator.UNIT_FACTORS.keys())[::-1]  # Reverse order
         self.resources = DataCalculator.calculate_and_distribute(0)  # Initialize resources as a dictionary
-        self.generators = [0] * len(self.units)
+        self.generators = [0] * (len(self.units) - 1)  # Remove one generator for yottabytes
 
         # Create labels, buttons, and generator displays for each unit
         self.labels = []
@@ -22,15 +22,17 @@ class RolloverClickerGame:
             label.grid(row=i, column=0, padx=5, pady=5)
             self.labels.append(label)
 
-            generator_label = tk.Label(master, text=f"Generators: {self.generators[i]}")
-            generator_label.grid(row=i, column=1, padx=5, pady=5)
-            self.generator_labels.append(generator_label)
+            if i < len(self.units) - 1:  # Don't create generator label and button for yottabytes
+                generator_label = tk.Label(master, text=f"Generators: {self.generators[i]}")
+                generator_label.grid(row=i, column=1, padx=5, pady=5)
+                self.generator_labels.append(generator_label)
 
-            cost_unit = self.units[i-1] if i > 0 else "N/A"
-            button = tk.Button(master, text=f"Buy {name.capitalize()} Generator (Cost: 10 {cost_unit.capitalize()})",
-                               command=lambda i=i: self.buy_generator(i))
-            button.grid(row=i, column=2, padx=5, pady=5)
-            self.buy_buttons.append(button)
+                cost_unit = self.units[i+1]
+                cost = 10
+                button = tk.Button(master, text=f"Buy {name.capitalize()} Generator (Cost: {cost} {cost_unit.capitalize()}s)",
+                                   command=lambda i=i: self.buy_generator(i))
+                button.grid(row=i, column=2, padx=5, pady=5)
+                self.buy_buttons.append(button)
 
         # Create dropdown for selecting data type
         self.selected_data_type = tk.StringVar()
@@ -57,21 +59,21 @@ class RolloverClickerGame:
         self.update_display()
 
     def buy_generator(self, i):
-        if i == 0:
-            print(f"Cannot buy generator for highest tier.")
+        if i >= len(self.generators):
+            print(f"Cannot buy generator for {self.units[i]}.")
             return
 
-        cost_unit = self.units[i-1]
-        cost = DataCalculator.convert_to_bits(10, cost_unit)
+        cost_unit = self.units[i+1]
+        cost = 10
 
-        if self.resources['bit'] >= cost:
-            self.resources = DataCalculator.calculate_and_distribute(cost, 'subtract')
+        if self.resources[cost_unit] >= cost:
+            self.resources = DataCalculator.calculate_and_distribute(DataCalculator.convert_to_bits(cost, cost_unit), 'subtract')
             self.generators[i] += 1
             self.update_display()
             print(f"Successfully bought {self.units[i].capitalize()} Generator.")
         else:
             print(f"Not enough resources to buy {self.units[i].capitalize()} Generator.")
-
+            
     def sell_all_generators(self):
         refund = 0
         for i in range(1, len(self.units)):  # Exclude the highest tier
@@ -102,10 +104,17 @@ class RolloverClickerGame:
         for i, count in enumerate(self.generators):
             self.generator_labels[i].config(text=f"Generators: {count}")
 
-
-
+        # Update buy buttons
+        for i, unit in enumerate(self.units[:-1]):  # Exclude yottabytes
+            cost_unit = self.units[i+1]
+            cost = 10
+            affordable = self.resources[cost_unit] >= cost
+            self.buy_buttons[i].config(
+                text=f"Buy {unit.capitalize()} Generator (Cost: {cost} {cost_unit.capitalize()}s)",
+                state="normal" if affordable else "disabled"
+            )
 
 if __name__ == "__main__":
     root = tk.Tk()
-    app = RolloverClickerGame(root)
+    app = DataClickerGame(root)
     root.mainloop()
