@@ -24,6 +24,14 @@ class DataCalculator:
         return int(value * DataCalculator.UNIT_FACTORS[unit])
 
     @staticmethod
+    def convert_from_bits(bits):
+        """Convert bits to the largest possible unit."""
+        for unit, factor in reversed(DataCalculator.UNIT_FACTORS.items()):
+            if bits >= factor:
+                return bits / factor, unit
+        return bits, 'bit'
+
+    @staticmethod
     def add(value1, unit1, value2, unit2):
         """Add two values with different units and return the result in bits."""
         bits1 = DataCalculator.convert_to_bits(value1, unit1)
@@ -57,54 +65,55 @@ class CalculatorGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("Data Calculator")
-
+        self.current_value = 0  # Initialize current value to 0
         self.create_widgets()
 
     def create_widgets(self):
         units = list(DataCalculator.UNIT_FACTORS.keys())
 
-        # Value 1
-        self.value1_label = ttk.Label(self.root, text="Value 1:")
-        self.value1_label.grid(column=0, row=0, padx=10, pady=5)
-        self.value1_entry = ttk.Entry(self.root)
-        self.value1_entry.grid(column=1, row=0, padx=10, pady=5)
-        self.unit1_combo = ttk.Combobox(self.root, values=units)
-        self.unit1_combo.grid(column=2, row=0, padx=10, pady=5)
-
-        # Value 2
-        self.value2_label = ttk.Label(self.root, text="Value 2:")
-        self.value2_label.grid(column=0, row=1, padx=10, pady=5)
-        self.value2_entry = ttk.Entry(self.root)
-        self.value2_entry.grid(column=1, row=1, padx=10, pady=5)
-        self.unit2_combo = ttk.Combobox(self.root, values=units)
-        self.unit2_combo.grid(column=2, row=1, padx=10, pady=5)
+        # Input Value
+        self.value_label = ttk.Label(self.root, text="Input Value:")
+        self.value_label.grid(column=0, row=0, padx=10, pady=5)
+        self.value_entry = ttk.Entry(self.root)
+        self.value_entry.grid(column=1, row=0, padx=10, pady=5)
+        self.unit_combo = ttk.Combobox(self.root, values=units)
+        self.unit_combo.grid(column=2, row=0, padx=10, pady=5)
+        self.unit_combo.set('bit')  # Set default unit to bit
 
         # Operation Buttons
-        self.add_button = ttk.Button(self.root, text="Add", command=self.add)
-        self.add_button.grid(column=0, row=2, padx=10, pady=5)
-        self.subtract_button = ttk.Button(self.root, text="Subtract", command=self.subtract)
-        self.subtract_button.grid(column=1, row=2, padx=10, pady=5)
-        self.multiply_button = ttk.Button(self.root, text="Multiply", command=self.multiply)
-        self.multiply_button.grid(column=2, row=2, padx=10, pady=5)
-        self.divide_button = ttk.Button(self.root, text="Divide", command=self.divide)
-        self.divide_button.grid(column=3, row=2, padx=10, pady=5)
+        self.add_button = ttk.Button(self.root, text="Add", command=lambda: self.perform_operation(DataCalculator.add))
+        self.add_button.grid(column=0, row=1, padx=10, pady=5)
+        self.subtract_button = ttk.Button(self.root, text="Subtract", command=lambda: self.perform_operation(DataCalculator.subtract))
+        self.subtract_button.grid(column=1, row=1, padx=10, pady=5)
+        self.multiply_button = ttk.Button(self.root, text="Multiply", command=lambda: self.perform_operation(DataCalculator.multiply))
+        self.multiply_button.grid(column=2, row=1, padx=10, pady=5)
+        self.divide_button = ttk.Button(self.root, text="Divide", command=lambda: self.perform_operation(DataCalculator.divide))
+        self.divide_button.grid(column=3, row=1, padx=10, pady=5)
 
         # Result
         self.result_label = ttk.Label(self.root, text="Result:")
-        self.result_label.grid(column=0, row=3, padx=10, pady=5)
+        self.result_label.grid(column=0, row=2, padx=10, pady=5)
         self.result_text = tk.Text(self.root, height=10, width=50)
-        self.result_text.grid(column=1, row=3, columnspan=3, padx=10, pady=5)
+        self.result_text.grid(column=1, row=2, columnspan=3, padx=10, pady=5)
 
-    def get_values(self):
+    def get_input_value(self):
         try:
-            value1 = float(self.value1_entry.get())
-            unit1 = self.unit1_combo.get()
-            value2 = float(self.value2_entry.get())
-            unit2 = self.unit2_combo.get()
-            return value1, unit1, value2, unit2
+            value = float(self.value_entry.get())
+            unit = self.unit_combo.get()
+            return value, unit
         except ValueError:
-            messagebox.showerror("Input Error", "Please enter valid numbers for values.")
+            messagebox.showerror("Input Error", "Please enter a valid number for the input value.")
             return None
+
+    def perform_operation(self, operation):
+        input_value = self.get_input_value()
+        if input_value:
+            value, unit = input_value
+            try:
+                self.current_value = operation(self.current_value, 'bit', value, unit)
+                self.display_result(self.current_value)
+            except ValueError as e:
+                messagebox.showerror("Calculation Error", str(e))
 
     def display_result(self, result_bits):
         self.result_text.delete(1.0, tk.END)
@@ -114,40 +123,30 @@ class CalculatorGUI:
             factor = DataCalculator.UNIT_FACTORS[unit]
             value = remaining_bits // factor
             remaining_bits %= factor
-            self.result_text.insert(tk.END, f"{unit}: {int(value)}\n")
+            if value > 0:
+                self.result_text.insert(tk.END, f"{unit}: {int(value)}\n")
 
-    def add(self):
-        values = self.get_values()
-        if values:
-            value1, unit1, value2, unit2 = values
-            result_bits = DataCalculator.add(value1, unit1, value2, unit2)
-            self.display_result(result_bits)
-
-    def subtract(self):
-        values = self.get_values()
-        if values:
-            value1, unit1, value2, unit2 = values
-            result_bits = DataCalculator.subtract(value1, unit1, value2, unit2)
-            self.display_result(result_bits)
-
-    def multiply(self):
-        values = self.get_values()
-        if values:
-            value1, unit1, value2, unit2 = values
-            result_bits = DataCalculator.multiply(value1, unit1, value2, unit2)
-            self.display_result(result_bits)
-
-    def divide(self):
-        values = self.get_values()
-        if values:
-            value1, unit1, value2, unit2 = values
-            try:
-                result_bits = DataCalculator.divide(value1, unit1, value2, unit2)
-                self.display_result(result_bits)
-            except ValueError as e:
-                messagebox.showerror("Calculation Error", str(e))
+# Example usage as an API
+def calculate(operation, value1, unit1, value2, unit2):
+    """Perform a calculation and return the result in the largest possible unit."""
+    operations = {
+        'add': DataCalculator.add,
+        'subtract': DataCalculator.subtract,
+        'multiply': DataCalculator.multiply,
+        'divide': DataCalculator.divide
+    }
+    if operation not in operations:
+        raise ValueError(f"Unknown operation: {operation}")
+    
+    result_bits = operations[operation](value1, unit1, value2, unit2)
+    return DataCalculator.convert_from_bits(result_bits)
 
 if __name__ == "__main__":
+    # GUI usage
     root = tk.Tk()
     app = CalculatorGUI(root)
     root.mainloop()
+
+    # API usage example
+    print(calculate('add', 1, 'gigabyte', 500, 'megabyte'))
+    print(calculate('multiply', 2, 'terabyte', 3, 'bit'))
