@@ -159,10 +159,31 @@ class DataClickerGame:
         self.master.after(1000, self.auto_increment)  # Repeat every second
 
     def update_display(self):
+        # Update only the necessary parts of the UI
         self.data_section.update_display({unit: self.resources[unit] for unit in reversed(self.units)})
         self.inventory_section.update_display(self.generators, self.documents, self.inventory)
         self.upload_button.config(state=tk.NORMAL if self.documents > 0 else tk.DISABLED)
-        self.store_section.update_store_items()
+        if self.should_update_store():
+            self.store_section.update_store_items()
+        self.master.update_idletasks()  # Use update_idletasks instead of update
+
+    def should_update_store(self):
+        # Check if any store item's availability has changed
+        for item in self.store_section.store_items:
+            if item['action'] == 'buy_generator':
+                unit = item['name'].split()[-2].lower()
+                if self.can_afford(item['cost']) != item['button']['state'] == tk.NORMAL:
+                    return True
+            elif item['action'] == 'buy_item':
+                if self.can_afford(item['cost']) != item['button']['state'] == tk.NORMAL:
+                    return True
+        return False
+
+    def can_afford(self, cost):
+        cost_value, cost_unit = cost.split()
+        cost_in_bits = DataCalculator.convert_to_bits(float(cost_value), cost_unit.lower())
+        total_bits = sum(DataCalculator.convert_to_bits(self.resources[unit], unit) for unit in self.units)
+        return total_bits >= cost_in_bits
 
     def execute_command(self, command):
         parts = command.split()

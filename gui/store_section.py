@@ -10,6 +10,7 @@ class StoreSection:
         self.upgrade_store = upgrade_store
         self.inventory = inventory
         self.units = units
+        self.store_items = []
         self.create_store_frame()
         self.update_store_items()
 
