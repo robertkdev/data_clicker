@@ -65,9 +65,12 @@ class DataClickerGame:
 
         cost_unit = self.units[i+1]
         cost = 10
+        cost_in_bits = DataCalculator.convert_to_bits(cost, cost_unit)
 
-        if self.resources[cost_unit] >= cost:
-            self.resources = DataCalculator.calculate_and_distribute(DataCalculator.convert_to_bits(cost, cost_unit), 'subtract')
+        total_bits = sum(DataCalculator.convert_to_bits(self.resources[unit], unit) for unit in self.units)
+
+        if total_bits >= cost_in_bits:
+            self.resources = DataCalculator.calculate_and_distribute(cost_in_bits, 'subtract')
             self.generators[i] += 1
             self.update_display()
             print(f"Successfully bought {self.units[i].capitalize()} Generator.")
@@ -75,12 +78,14 @@ class DataClickerGame:
             print(f"Not enough resources to buy {self.units[i].capitalize()} Generator.")
             
     def sell_all_generators(self):
-        refund = 0
-        for i in range(1, len(self.units)):  # Exclude the highest tier
-            refund += DataCalculator.convert_to_bits(self.generators[i] * 10, self.units[i-1])
-            self.generators[i] = 0
+        refund_bits = 0
+        for i, count in enumerate(self.generators):
+            if i < len(self.units) - 1:  # Exclude the highest tier (yottabytes)
+                cost_unit = self.units[i+1]
+                refund_bits += DataCalculator.convert_to_bits(count * 10, cost_unit)
+                self.generators[i] = 0
 
-        self.resources = DataCalculator.calculate_and_distribute(refund, 'add')
+        self.resources = DataCalculator.calculate_and_distribute(refund_bits, 'add')
         self.update_display()
         print("All generators sold and resources refunded.")
 
@@ -102,10 +107,12 @@ class DataClickerGame:
             self.generator_labels[i].config(text=f"Generators: {count}")
 
         # Update buy buttons
+        total_bits = sum(DataCalculator.convert_to_bits(self.resources[unit], unit) for unit in self.units)
         for i, unit in enumerate(self.units[:-1]):  # Exclude yottabytes
             cost_unit = self.units[i+1]
             cost = 10
-            affordable = self.resources[cost_unit] >= cost
+            cost_in_bits = DataCalculator.convert_to_bits(cost, cost_unit)
+            affordable = total_bits >= cost_in_bits
             self.buy_buttons[i].config(
                 text=f"Buy {unit.capitalize()} Generator (Cost: {cost} {cost_unit.capitalize()}s)",
                 state="normal" if affordable else "disabled"
