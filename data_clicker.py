@@ -95,10 +95,7 @@ class DataClickerGame:
     def update_display(self):
         for i, unit in enumerate(self.units):
             value = self.resources.get(unit, 0)
-            if value > 0:
-                self.labels[i].config(text=f"{unit.capitalize()}: {value}")
-            else:
-                self.labels[i].config(text="")
+            self.labels[i].config(text=f"{unit.capitalize()}: {value}")
 
         # Update generator labels
         for i, count in enumerate(self.generators):

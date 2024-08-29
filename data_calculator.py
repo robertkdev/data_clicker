@@ -153,8 +153,7 @@ class CalculatorGUI:
             factor = DataCalculator.UNIT_FACTORS[unit]
             value = remaining_bits // factor
             remaining_bits %= factor
-            if value > 0:
-                self.result_text.insert(tk.END, f"{unit}: {int(value)}\n")
+            self.result_text.insert(tk.END, f"{unit}: {int(value)}\n")
 
 # Example usage as an API
 def calculate(operation, value1, unit1, value2, unit2):
