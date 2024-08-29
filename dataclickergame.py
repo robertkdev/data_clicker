@@ -37,7 +37,7 @@ class DataClickerGame:
         # Create sections
         self.data_section = DataSection(self.main_frame, self.units)
         self.inventory_section = InventorySection(self.main_frame)
-        self.store_section = StoreSection(self.main_frame, self.store_level, self.buy_generator, self.buy_item, self.upgrade_store, self.inventory)
+        self.store_section = StoreSection(self.main_frame, self.store_level, self.buy_generator, self.buy_item, self.upgrade_store, self.inventory, self.units)
 
         # Create buttons
         self.create_buttons()
@@ -82,39 +82,48 @@ class DataClickerGame:
         else:
             print(f"Not enough resources to upgrade the store. Cost: {cost_in_bytes} Bytes")
 
-    def buy_generator(self, unit):
-        cost_unit = self.units[self.units.index(unit) + 1]
-        cost = 10
+    def buy(self, cost, cost_unit, item_name=None, unit=None):
         cost_in_bits = DataCalculator.convert_to_bits(cost, cost_unit)
-
         total_bits = sum(DataCalculator.convert_to_bits(self.resources[unit], unit) for unit in self.units)
 
         if total_bits >= cost_in_bits:
             self.resources = DataCalculator.calculate_and_distribute(cost_in_bits, 'subtract')
-            if unit not in self.generators:
-                self.generators[unit] = 1
-            else:
-                self.generators[unit] += 1
+            if item_name:
+                if item_name not in self.inventory:
+                    self.inventory[item_name] = 1
+                else:
+                    self.inventory[item_name] += 1
+                print(f"Successfully bought {item_name}.")
+            elif unit:
+                if unit not in self.generators:
+                    self.generators[unit] = 1
+                else:
+                    self.generators[unit] += 1
+                print(f"Successfully bought {unit.capitalize()} Generator.")
             self.update_display()
-            print(f"Successfully bought {unit.capitalize()} Generator.")
+            self.store_section.update_store_items()
         else:
-            print(f"Not enough resources to buy {unit.capitalize()} Generator.")
+            if item_name:
+                print(f"Not enough resources to buy {item_name}.")
+            elif unit:
+                print(f"Not enough resources to buy {unit.capitalize()} Generator.")
+
+    def buy_generator(self, unit):
+        if unit == 'bit':
+            cost_unit = 'byte'
+            cost = 10  # Define the cost for a bit generator
+        elif self.units.index(unit) + 1 < len(self.units):
+            cost_unit = self.units[self.units.index(unit) + 1]
+            cost = 10
+        else:
+            print(f"Cannot buy generator for {unit}. No higher unit available.")
+            return
+
+        self.buy(cost, cost_unit, unit=unit)
 
     def buy_item(self, item_name, cost):
-        cost_in_bits = DataCalculator.convert_to_bits(cost, 'byte')
-        total_bits = sum(DataCalculator.convert_to_bits(self.resources[unit], unit) for unit in self.units)
-
-        if total_bits >= cost_in_bits:
-            self.resources = DataCalculator.calculate_and_distribute(cost_in_bits, 'subtract')
-            if item_name not in self.inventory:
-                self.inventory[item_name] = 1
-            else:
-                self.inventory[item_name] += 1
-            self.update_display()
-            self.store_section.update_store_items()  # Update store items after purchase
-            print(f"Successfully bought {item_name}.")
-        else:
-            print(f"Not enough resources to buy {item_name}.")
+        self.buy(cost, 'byte', item_name=item_name)
+        return True  # Ensure it returns a truthy value
 
     def go_explore(self):
         if random.random() < 0.9:  # 90% chance to find a document

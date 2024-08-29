@@ -2,15 +2,20 @@ import tkinter as tk
 from config import STORE_ITEMS, STORE_UPGRADE_COSTS
 
 class StoreSection:
-    def __init__(self, parent, store_level, buy_generator, buy_item, upgrade_store, inventory):
-        self.frame = tk.Frame(parent, bg='#e6e6e6', bd=2, relief=tk.GROOVE)
-        self.frame.grid(row=1, column=2, sticky="nsew", padx=20, pady=20)
-
+    def __init__(self, parent, store_level, buy_generator, buy_item, upgrade_store, inventory, units):
+        self.parent = parent
         self.store_level = store_level
         self.buy_generator = buy_generator
-        self.buy_item = buy_item
+        self.original_buy_item = buy_item
         self.upgrade_store = upgrade_store
         self.inventory = inventory
+        self.units = units
+        self.create_store_frame()
+        self.update_store_items()
+
+    def create_store_frame(self):
+        self.frame = tk.Frame(self.parent, bg='#e6e6e6', bd=2, relief=tk.GROOVE)
+        self.frame.grid(row=1, column=2, sticky="nsew", padx=20, pady=20)
 
         self.create_header()
         self.create_items_frame()
@@ -34,7 +39,10 @@ class StoreSection:
 
         if self.store_level in STORE_ITEMS:
             for item in STORE_ITEMS[self.store_level]:
-                if item["name"] != "Buy Level 1 Sword" or "Level 1 Sword" not in self.inventory:
+                if item["name"] == "Buy Level 1 Sword":
+                    if "Level 1 Sword" not in self.inventory:
+                        self.create_store_item(item["name"], item["cost"], self.buy_item_wrapper)
+                else:
                     self.create_store_item(item["name"], item["cost"], getattr(self, item["action"]))
 
         if self.store_level < 5:  # Assuming 5 is the maximum store level
@@ -48,5 +56,26 @@ class StoreSection:
         label = tk.Label(frame, text=name, font=("Helvetica", 12), bg='#f0f0f0')
         label.pack(side="left", padx=10, pady=5)
 
-        button = tk.Button(frame, text=f"Buy ({cost})", command=command, bg='#4CAF50', fg='white')
+        numeric_cost = int(cost.split()[0])  # Extract numeric part of the cost
+
+        if command == self.upgrade_store:
+            button = tk.Button(frame, text=f"Buy ({cost})", command=command, bg='#4CAF50', fg='white')
+        elif command == self.buy_generator:
+            unit = name.split()[1].lower()
+            if unit in self.units:
+                button = tk.Button(frame, text=f"Buy ({cost})", command=lambda: command(unit), bg='#4CAF50', fg='white')
+            else:
+                print(f"Invalid unit: {unit}")
+                return
+        else:
+            button = tk.Button(frame, text=f"Buy ({cost})", command=lambda: command(name, numeric_cost), bg='#4CAF50', fg='white')
+        
         button.pack(side="right", padx=10, pady=5)
+
+    def buy_item_wrapper(self, name, cost):
+        result = self.original_buy_item(name, cost)
+        print(f"buy_item_wrapper: {name}, {cost}, result: {result}")  # Debug print statement
+        if result and name == "Buy Level 1 Sword":
+            self.inventory["Level 1 Sword"] = 1
+            self.update_store_items()  # Refresh the store display
+        return result

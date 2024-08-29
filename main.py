@@ -1,5 +1,5 @@
 import tkinter as tk
-from game_logic import DataClickerGame
+from dataclickergame import DataClickerGame
 
 if __name__ == "__main__":
     root = tk.Tk()
