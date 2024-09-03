@@ -1,9 +1,13 @@
 STORE_ITEMS = {
-    2: [
-        {"name": "Buy Bit Generator", "cost": "10 Bytes", "action": "buy_generator"},
-        {"name": "Buy Level 1 Sword", "cost": "5 Bytes", "action": "buy_item"}
+    1: [
+        {"name": "Upgrade Store", "cost": "5 Bytes", "description": "Upgrade the store to unlock new items", "action": "upgrade_store", "add_to_inventory": False, "spammable": True}
     ],
-    # ... other store levels ...
+    2: [
+        {"name": "Bit Generator", "cost": "10 Bytes", "description": "Generates bits over time", "action": "buy_generator", "add_to_inventory": True, "spammable": True},
+        {"name": "Level 1 Sword", "cost": "5 Bytes", "description": "A basic sword for your inventory", "action": "buy_item", "add_to_inventory": True, "spammable": False},
+        {"name": "Upgrade Store", "cost": "10 Bytes", "description": "Upgrade the store to unlock new items", "action": "upgrade_store", "add_to_inventory": False, "spammable": True}
+    ],
+    3: [
+        {"name": "Upgrade Store", "cost": "5 Bytes", "description": "Upgrade the store to unlock new items", "action": "upgrade_store", "add_to_inventory": False, "spammable": True}
+    ],
 }
-
-STORE_UPGRADE_COSTS = {1: 5, 2: 100, 3: 1000, 4: 10000}

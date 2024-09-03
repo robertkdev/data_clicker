@@ -3,6 +3,7 @@ from dataclickergame import DataClickerGame
 
 if __name__ == "__main__":
     root = tk.Tk()
+    root.configure(bg='#1e1e1e')
     
     # Get screen width and height
     screen_width = root.winfo_screenwidth()

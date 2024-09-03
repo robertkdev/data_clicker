@@ -2,10 +2,10 @@ import tkinter as tk
 
 class CommandBox:
     def __init__(self, parent, execute_command):
-        self.frame = tk.Frame(parent, bg='#e6e6e6', bd=2, relief=tk.GROOVE)
+        self.frame = tk.Frame(parent, bg='#2c2c2c', bd=2, relief=tk.GROOVE)
         self.frame.grid(row=4, column=0, columnspan=3, sticky="ew", padx=20, pady=10)
         
-        self.entry = tk.Entry(self.frame, font=("Helvetica", 14))
+        self.entry = tk.Entry(self.frame, font=("Helvetica", 14), bg='#3a3a3a', fg='#ffffff', insertbackground='#ffffff')
         self.entry.pack(fill="x", padx=10, pady=5)
         self.entry.bind("<Return>", self.on_enter)
         

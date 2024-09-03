@@ -5,16 +5,19 @@ import random
 from gui.data_section import DataSection
 from gui.inventory_section import InventorySection
 from gui.store_section import StoreSection
-from config import STORE_ITEMS, STORE_UPGRADE_COSTS
+from config import STORE_ITEMS
 from commands import CommandBox
+from utils.item import Item
+from utils.store import Store
 
 class DataClickerGame:
     def __init__(self, master, enable_commands=False):
         self.master = master
         self.master.title("Data Clicker")
+        self.master.configure(bg='#1e1e1e')
 
         # Create a main frame to hold all content
-        self.main_frame = tk.Frame(master, bg='#f0f0f0')
+        self.main_frame = tk.Frame(master, bg='#1e1e1e')
         self.main_frame.pack(expand=True, fill="both")
 
         # Configure main frame to center its contents
@@ -30,14 +33,15 @@ class DataClickerGame:
         self.units = list(DataCalculator.UNIT_FACTORS.keys())  # Reverse order
         self.resources = DataCalculator.calculate_and_distribute(0)  # Initialize resources as a dictionary
         self.generators = {}  # Initialize generators as an empty dictionary
-        self.store_level = 1
+        self.store = Store(self.buy_generator, self.buy_item, self.upgrade_store)
         self.documents = 0  # Initialize document count
         self.inventory = {}  # Initialize inventory as an empty dictionary
 
         # Create sections
         self.data_section = DataSection(self.main_frame, self.units)
         self.inventory_section = InventorySection(self.main_frame)
-        self.store_section = StoreSection(self.main_frame, self.store_level, self.buy_generator, self.buy_item, self.upgrade_store, self.inventory, self.units)
+        self.store_section = StoreSection(self.main_frame, self.store, self.inventory, self.units)
+        self.store_section.update_store_items()  # Add this line
 
         # Create buttons
         self.create_buttons()
@@ -51,36 +55,26 @@ class DataClickerGame:
         self.auto_increment()
 
     def create_header(self):
-        self.header_frame = tk.Frame(self.main_frame, bg='#4a7abc', height=50)
+        self.header_frame = tk.Frame(self.main_frame, bg='#2c2c2c', height=50)
         self.header_frame.grid(row=0, column=0, columnspan=3, sticky="ew")
-        self.header_label = tk.Label(self.header_frame, text="Data Clicker", font=("Helvetica", 24, "bold"), bg='#4a7abc', fg='white')
+        self.header_label = tk.Label(self.header_frame, text="Data Clicker", font=("Helvetica", 24, "bold"), bg='#2c2c2c', fg='#ffffff')
         self.header_label.pack(pady=10)
 
     def create_buttons(self):
         self.explore_button = tk.Button(self.main_frame, text="Go Explore", command=self.go_explore,
-                                        bg='#FFA500', fg='white', font=("Helvetica", 14))
+                                        bg='#3a3a3a', fg='#ffffff', font=("Helvetica", 14), activebackground='#4a4a4a', activeforeground='#ffffff')
         self.explore_button.grid(row=2, column=0, columnspan=3, pady=(10, 5), padx=20, sticky="ew")
 
         self.upload_button = tk.Button(self.main_frame, text="Upload Document", command=self.upload_document,
-                                       bg='#008CBA', fg='white', font=("Helvetica", 14), state=tk.DISABLED)
+                                    bg='#3a3a3a', fg='#ffffff', font=("Helvetica", 14), state=tk.DISABLED, activebackground='#4a4a4a', activeforeground='#ffffff')
         self.upload_button.grid(row=3, column=0, columnspan=3, pady=(5, 10), padx=20, sticky="ew")
 
-    def upgrade_store(self):
-        if self.store_level >= len(STORE_UPGRADE_COSTS):
-            print("Store is already at maximum level.")
-            return
-
-        cost_in_bytes = STORE_UPGRADE_COSTS[self.store_level]
-        cost_in_bits = DataCalculator.convert_to_bits(cost_in_bytes, 'byte')
-        total_bits = sum(DataCalculator.convert_to_bits(self.resources[unit], unit) for unit in self.units)
-
-        if total_bits >= cost_in_bits:
-            self.resources = DataCalculator.calculate_and_distribute(cost_in_bits, 'subtract')
-            self.store_level += 1
-            self.store_section.update_store_level(self.store_level)
-            self.update_display()
-        else:
-            print(f"Not enough resources to upgrade the store. Cost: {cost_in_bytes} Bytes")
+    def upgrade_store(self, cost_in_bytes):
+        if self.buy(cost_in_bytes, 'byte'):
+            self.store.upgrade()
+            self.store_section.update_store_level(self.store.level)
+            return True
+        return False
 
     def buy(self, cost, cost_unit, item_name=None, unit=None):
         cost_in_bits = DataCalculator.convert_to_bits(cost, cost_unit)
@@ -99,14 +93,15 @@ class DataClickerGame:
                     self.generators[unit] = 1
                 else:
                     self.generators[unit] += 1
-                print(f"Successfully bought {unit.capitalize()} Generator.")
             self.update_display()
             self.store_section.update_store_items()
+            return True
         else:
             if item_name:
                 print(f"Not enough resources to buy {item_name}.")
             elif unit:
                 print(f"Not enough resources to buy {unit.capitalize()} Generator.")
+            return False
 
     def buy_generator(self, unit):
         if unit == 'bit':
@@ -122,8 +117,7 @@ class DataClickerGame:
         self.buy(cost, cost_unit, unit=unit)
 
     def buy_item(self, item_name, cost):
-        self.buy(cost, 'byte', item_name=item_name)
-        return True  # Ensure it returns a truthy value
+        return self.buy(cost, 'byte', item_name=item_name)
 
     def go_explore(self):
         if random.random() < 0.9:  # 90% chance to find a document
@@ -145,7 +139,6 @@ class DataClickerGame:
         if self.documents > 0:
             self.documents -= 1
             self.resources = DataCalculator.calculate_and_distribute(1, 'add')  # Add 1 bit
-            print("Document uploaded successfully!")
         else:
             print("No documents to upload!")
         self.update_display()
@@ -168,20 +161,25 @@ class DataClickerGame:
         self.master.update_idletasks()  # Use update_idletasks instead of update
 
     def should_update_store(self):
-        # Check if any store item's availability has changed
-        for item in self.store_section.store_items:
-            if item['action'] == 'buy_generator':
-                unit = item['name'].split()[-2].lower()
-                if self.can_afford(item['cost']) != item['button']['state'] == tk.NORMAL:
+        for item in self.store_section.store_items.values():
+            if item.action == self.buy_generator:
+                unit = item.name.split()[-2].lower()
+                if self.can_afford(item.cost) != (item.button and item.button['state'] == tk.NORMAL):
                     return True
-            elif item['action'] == 'buy_item':
-                if self.can_afford(item['cost']) != item['button']['state'] == tk.NORMAL:
+            elif item.action == self.buy_item:
+                if self.can_afford(item.cost) != (item.button and item.button['state'] == tk.NORMAL):
                     return True
         return False
 
     def can_afford(self, cost):
         cost_value, cost_unit = cost.split()
-        cost_in_bits = DataCalculator.convert_to_bits(float(cost_value), cost_unit.lower())
+        cost_unit = cost_unit.lower()
+        if cost_unit.endswith('s'):  # Handle plural forms
+            cost_unit = cost_unit[:-1]
+        if cost_unit not in DataCalculator.UNIT_FACTORS:
+            print(f"Unknown unit: {cost_unit}")
+            return False
+        cost_in_bits = DataCalculator.convert_to_bits(float(cost_value), cost_unit)
         total_bits = sum(DataCalculator.convert_to_bits(self.resources[unit], unit) for unit in self.units)
         return total_bits >= cost_in_bits
 
@@ -212,3 +210,15 @@ class DataClickerGame:
         self.resources = DataCalculator.calculate_and_distribute(bits, 'add')
         self.update_display()
         print(f"Gave {quantity} {data_type}(s) to the player.")
+
+    def add_to_inventory(self, item_name):
+        if item_name not in self.inventory:
+            self.inventory[item_name] = 1
+        else:
+            self.inventory[item_name] += 1
+        print(f"Added {item_name} to inventory.")
+
+
+
+
+
