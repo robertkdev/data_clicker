@@ -74,20 +74,22 @@ class Store:
     def handle_purchase(self, item):
         if item.action:
             if item.name == "Upgrade Store":
-                self.upgrade()
+                success = self.upgrade()
             elif item.spammable:
-                item.action(item.name.split()[-2].lower())
+                success = item.action(item.name.split()[-2].lower())
             elif item.action == self.buy_generator:
-                item.action(item.name.split()[-2].lower())
+                success = item.action(item.name.split()[-2].lower())
             else:
-                item.action(item.name, int(item.cost.split()[0]))
+                success = item.action(item.name, int(item.cost.split()[0]))
+            
+            if success:
+                if item.add_to_inventory:
+                    self.buy_item(item.name, int(item.cost.split()[0]))
+                
+                if not item.spammable:
+                    self.remove_item(item.name)
+            
+            return success
         else:
             print(f"No action defined for {item.name}")
-
-        if item.add_to_inventory:
-            self.buy_item(item.name, int(item.cost.split()[0]))
-
-        if not item.spammable:
-            self.remove_item(item.name)
-
-        self.update_store_items()
+            return False

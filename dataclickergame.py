@@ -76,6 +76,19 @@ class DataClickerGame:
             return True
         return False
 
+    def buy_generator(self, unit):
+        if unit == 'bit':
+            cost_unit = 'byte'
+            cost = 10  # Define the cost for a bit generator
+        elif self.units.index(unit) + 1 < len(self.units):
+            cost_unit = self.units[self.units.index(unit) + 1]
+            cost = 10
+        else:
+            print(f"Cannot buy generator for {unit}. No higher unit available.")
+            return False
+
+        return self.buy(cost, cost_unit, unit=unit)
+
     def buy(self, cost, cost_unit, item_name=None, unit=None):
         cost_in_bits = DataCalculator.convert_to_bits(cost, cost_unit)
         total_bits = sum(DataCalculator.convert_to_bits(self.resources[unit], unit) for unit in self.units)
@@ -102,19 +115,6 @@ class DataClickerGame:
             elif unit:
                 print(f"Not enough resources to buy {unit.capitalize()} Generator.")
             return False
-
-    def buy_generator(self, unit):
-        if unit == 'bit':
-            cost_unit = 'byte'
-            cost = 10  # Define the cost for a bit generator
-        elif self.units.index(unit) + 1 < len(self.units):
-            cost_unit = self.units[self.units.index(unit) + 1]
-            cost = 10
-        else:
-            print(f"Cannot buy generator for {unit}. No higher unit available.")
-            return
-
-        self.buy(cost, cost_unit, unit=unit)
 
     def buy_item(self, item_name, cost):
         return self.buy(cost, 'byte', item_name=item_name)

@@ -52,24 +52,12 @@ class StoreSection:
         item.button = button  # Store the button reference in the item object
 
     def handle_purchase(self, item):
-        if item.action:
+        success = self.store.handle_purchase(item)
+        
+        if success:
             if item.name == "Upgrade Store":
-                self.store.upgrade()
-            elif item.spammable:
-                item.action(item.name.split()[-2].lower())
-            elif item.action == self.store.buy_generator:
-                item.action(item.name.split()[-2].lower())
-            else:
-                item.action(item.name, int(item.cost.split()[0]))
-        else:
-            print(f"No action defined for {item.name}")
-
-        if item.add_to_inventory:
-            self.store.buy_item(item.name, int(item.cost.split()[0]))
-
-        if not item.spammable:
-            self.store.remove_item(item.name)
-
+                self.update_store_level(self.store.level)
+        
         self.update_store_items()
 
     def update_store_level(self, new_level):
